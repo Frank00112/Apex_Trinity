@@ -19,7 +19,7 @@ void ATAIController::ExecuteAITurn()
 {
 	GameMode = Cast<ATGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 
-	// SAFETY BLOCK: If the match has concluded, the AI does not initiate its turn logic
+	// If the match has concluded, the AI does not initiate its turn logic
 	if (!GameMode || GameMode->bIsGameOver) return;
 
 	TArray<AActor*> AllActors;
@@ -73,7 +73,7 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 
 	AUnit* TargetEnemy = FindClosestEnemy(AIUnit);
 
-	// ACTION A: Try to attack immediately if already in range
+	// ACTION A: try to attack immediately if already in range
 	if (TargetEnemy && GameMode->IsAttackValid(AIUnit, TargetEnemy))
 	{
 		if (TargetEnemy->CurrentTile)
@@ -107,6 +107,14 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 			{
 				int32 CounterDamage = FMath::RandRange(1, 3);
 				AIUnit->ReceiveDamage(CounterDamage);
+
+				// GDD logging: counterattack
+				FString CounterPlayerTag = (TargetEnemy->TeamID == 0) ? TEXT("HP") : TEXT("AI");
+				FString CounterUnitTag = TargetEnemy->IsA(ASniper::StaticClass()) ? TEXT("S") : TEXT("B");
+				FString AICoord = GameMode->GameField->GetAlphanumericCoordinate(AIUnit->CurrentTile->GetGridPosition());
+
+				FString CounterLogStr = FString::Printf(TEXT("%s: %s %s %d"), *CounterPlayerTag, *CounterUnitTag, *AICoord, CounterDamage);
+				GameMode->LogAction(CounterLogStr);
 			}
 		}
 
@@ -115,7 +123,7 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 		return;
 	}
 
-	// ACTION B: Calculate optimal movement
+	// ACTION B: calculate optimal movement
 	ATile* BestTile = nullptr;
 	float BestTacticalScore = -MAX_FLT; // Initialize with the lowest possible floating-point value
 
@@ -139,7 +147,7 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 				TacticalScore -= DistToEnemy; // Subtract distance (lower distance results in a higher score)
 			}
 
-			// 2. Objective factor: Assign absolute priority to uncontested Towers
+			// 2. Objective factor: assign absolute priority to uncontested Towers
 			for (AActor* TowerActor : AllTowers)
 			{
 				ATower* Tower = Cast<ATower>(TowerActor);
@@ -164,7 +172,8 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 			// Memory penalty to break infinite pathfinding loops
 			if (PreviousUnitTiles.Contains(AIUnit) && PreviousUnitTiles[AIUnit] == Tile)
 			{
-				TacticalScore -= 100000.f; // Penalità enorme per impedire il ritorno sulla cella precedente
+				TacticalScore -= 100000.f; // Large penalty applied to the previous tile's cost to prevent immediate backtracking
+                                           // and mitigate oscillation loops in the Greedy pathfinding logic.
 			}
 
 			// If this tactical score is the highest found so far, cache this tile as the best option
@@ -176,7 +185,7 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 		}
 	}
 
-	// ACTION C: Execute the best found move
+	// ACTION C: execute the best found move
 	if (BestTile)
 	{
 		BestTile->BP_SetMovementHighlight(true);
@@ -237,6 +246,28 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 			// Format: [Player] [Unit] [TargetCoord] [Damage]
 			FString AtkLogStr = FString::Printf(TEXT("%s: %s %s %d"), *AtkPlayerTag, *AtkUnitTag, *AtkTargetCoord, Damage);
 			GameMode->LogAction(AtkLogStr);
+
+			// Counterattack logic after movement
+			if (AIUnit->IsA(ASniper::StaticClass()))
+			{
+				bool bTargetIsSniper = TargetEnemy->IsA(ASniper::StaticClass());
+				bool bTargetIsBrawler = TargetEnemy->IsA(ABrawler::StaticClass());
+				int32 Dist = GameMode->GameField->GetManhattanDistance(AIUnit->CurrentTile->GetGridPosition(), TargetEnemy->CurrentTile->GetGridPosition());
+
+				if (bTargetIsSniper || (bTargetIsBrawler && Dist == 1))
+				{
+					int32 CounterDamage = FMath::RandRange(1, 3);
+					AIUnit->ReceiveDamage(CounterDamage);
+
+					// GDD logging: counterattack
+					FString CounterPlayerTag = (TargetEnemy->TeamID == 0) ? TEXT("HP") : TEXT("AI");
+					FString CounterUnitTag = TargetEnemy->IsA(ASniper::StaticClass()) ? TEXT("S") : TEXT("B");
+					FString AICoord = GameMode->GameField->GetAlphanumericCoordinate(AIUnit->CurrentTile->GetGridPosition());
+
+					FString CounterLogStr = FString::Printf(TEXT("%s: %s %s %d"), *CounterPlayerTag, *CounterUnitTag, *AICoord, CounterDamage);
+					GameMode->LogAction(CounterLogStr);
+				}
+			}
 
 			AIUnit->bHasAttacked = true;
 		}

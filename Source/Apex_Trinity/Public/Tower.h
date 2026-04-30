@@ -8,7 +8,7 @@
 
 class ATile;
 
-/** Represents the possible control states of a Tower actor */
+// Represents the possible control states of a Tower actor
 UENUM(BlueprintType)
 enum class ETowerState : uint8
 {
@@ -43,7 +43,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* StaticMeshComponent;
 
-	/** Updates the tower's visual representation */
+	// Updates the tower's visual representation 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Visuals")
 	void BP_UpdateTowerColor(int32 TeamColorID);
 
@@ -51,7 +51,7 @@ private:
 	FTimerHandle ContestedBlinkTimer;
 	bool bBlinkToggle;
 
-	// CRITICO: UFUNCTION è obbligatorio per garantire che il Timer trovi sempre la funzione
+	// UFUNCTION macro ensures the timer delegate can locate the function, preventing crashes or failed calls
 	UFUNCTION()
 	void ToggleContestedColor();
 };

@@ -21,5 +21,5 @@ ATPlayer::ATPlayer()
 	CameraComponent->SetProjectionMode(ECameraProjectionMode::Perspective);
 	// Reduce the Field of View (FOV) to flatten the perspective and simulate an orthographic projection
 	CameraComponent->FieldOfView = 20.f;
-	CameraComponent->SetRelativeLocation(FVector(0.f, 0.f, 12000.f));
+	CameraComponent->SetRelativeLocation(FVector(0.f, 0.f, 14000.f));
 }

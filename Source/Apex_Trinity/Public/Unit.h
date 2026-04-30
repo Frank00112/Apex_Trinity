@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-/* * BASE CLASS FOR UNITS - POLYMORPHISM APPROACH
+/* BASE CLASS FOR UNITS - POLYMORPHISM APPROACH
  * This class defines the shared interface (virtual functions like MoveToTile, Attack)
  * and common attributes (Health, Damage).
  * Derived classes (e.g., ASniper, ABrawler) will inherit from this and override
@@ -35,9 +35,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	int32 Health = 10;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats")
-	int32 MaxHealth;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	int32 MovementRange = 3;
 
@@ -50,16 +47,25 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	int32 MaxAttackDamage = 6;
 
+	// Visual movement speed of the pawn (Adjusted for VInterpConstantTo: Unreal Units per second)
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float MovementSpeed = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats")
+	int32 MaxHealth;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bHasMoved = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bHasAttacked = false;
 
-	int32 GetRandomAttackDamage() const;
+	// Cache the tile where the unit was originally deployed at match start for respawn logic
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Location")
+	ATile* InitialSpawnTile;
 
-	// Function to handle damage intake and unit death logic
-	void ReceiveDamage(int32 DamageAmount);
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	UWidgetComponent* HealthWidgetComp;
 
 	// Virtual functions: can be overridden by derived classes if necessary
 	UFUNCTION(BlueprintCallable, Category = "Actions")
@@ -69,15 +75,22 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Combat")
 	void BP_OnDeath();
 
-	virtual void Tick(float DeltaTime) override;
-
-	// Visual movement speed of the pawn (Adjusted for VInterpConstantTo: Unreal Units per second)
-	UPROPERTY(EditAnywhere, Category = "Movement")
-	float MovementSpeed = 100.f;
-
 	// Event triggered after spawning to visually differentiate teams
 	UFUNCTION(BlueprintImplementableEvent, Category = "Visuals")
 	void BP_ApplyTeamColor();
+
+	//Blueprint event triggered to update HUD
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void BP_UpdateHealthBar(float HealthPercent);
+
+	virtual void Tick(float DeltaTime) override;
+
+	int32 GetRandomAttackDamage() const;
+
+	// Function to handle damage intake and unit death logic
+	void ReceiveDamage(int32 DamageAmount);
+
+	
 
 	// Logical death handling and cleanup
 	void Die();
@@ -86,17 +99,6 @@ public:
 	void ResetActions();
 
 	void FaceTargetLocation(FVector LookAtTarget);
-
-	// Cache the tile where the unit was originally deployed at match start for respawn logic
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Location")
-	ATile* InitialSpawnTile;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
-	UWidgetComponent* HealthWidgetComp;
-    
-	//Blueprint event triggered to update HUD
-	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
-	void BP_UpdateHealthBar(float HealthPercent);
 
 protected:
 	// Visual components

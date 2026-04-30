@@ -43,18 +43,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Turn Logic")
 	void EndTurn();
 
-	//Evaluates the current game state to determine if a victory condition has been met */
-	void CheckWinCondition();
-
-	/** Counters for the victory condition: owning at least 2 towers for 2 consecutive turns */
+	// Counters for the victory condition: owning at least 2 towers for 2 consecutive turns 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Match")
 	int32 Player0TowerTurns = 0;
 
-	/** Counters for the victory condition: owning at least 2 towers for 2 consecutive turns */
+	// Counters for the victory condition: owning at least 2 towers for 2 consecutive turns
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Match")
 	int32 Player1TowerTurns = 0;
 
-	// UI Event to trigger "YOU WIN" or "YOU LOSE" screens in Blueprint */
+	// UI Event to trigger "YOU WIN" or "YOU LOSE" screens in Blueprint
 	UFUNCTION(BlueprintImplementableEvent, Category = "Game Flow")
 	void BP_OnGameOver(int32 WinningTeamID);
 
@@ -71,6 +68,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bIsGameOver = false;
 
+	// Evaluates the current game state to determine if a victory condition has been met.
 	// Updates the function signature to allow excluding a unit that has just died from the count
 	void CheckWinCondition(class AUnit* UnitToIgnore = nullptr);
 
@@ -114,6 +112,9 @@ public:
 
 	// Adds a formatted entry to the match log
 	void LogAction(const FString& ActionString);
+
+	// Returns true if the given unit has at least one attackable enemy within range
+	bool HasAnyValidTarget(class AUnit* Attacker) const;
 
 protected:
 	virtual void BeginPlay() override;

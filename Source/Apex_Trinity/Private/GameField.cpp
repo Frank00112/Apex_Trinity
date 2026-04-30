@@ -294,29 +294,44 @@ FVector AGameField::GetRelativeLocationByXYPosition(const int32 InX, const int32
 	return GetActorLocation() + FVector(PosX, PosY, PosZ);
 }
 
-int32 AGameField::QuantizePerlinNoise(const float NoiseValue) const
+int32 AGameField::QuantizePerlinNoise(float NoiseValue) const
 {
-	// 1. Map the Perlin range from [-1.0, 1.0] to [0.0, 1.0]
-	// This allows the noise values to align with the normalized logic of the UI sliders.
-	float NormalizedNoise = (NoiseValue + 1.0f) / 2.0f;
-	NormalizedNoise = FMath::Clamp(NormalizedNoise, 0.0f, 1.0f);
+	// 1. Normalize Perlin output from [-1, 1] to [0, 1]
+	float N = FMath::Clamp((NoiseValue + 1.0f) * 0.5f, 0.0f, 1.0f);
 
-	// 2. Remapping UI variables (0.0 to 1.0) onto playable safety ranges.
-	// The Lerp alpha parameter expects exactly a 0.0 to 1.0 range, making it perfectly congruent with the UI input.
-	// This ensures that even extreme slider positions result in valid, navigable game geometry.
-	float SafeWater = FMath::Lerp(0.10f, 0.40f, WaterThreshold);
-	float SafeGrass = FMath::Lerp(SafeWater + 0.15f, 0.70f, GrassThreshold);
-	float SafeM1 = FMath::Lerp(SafeGrass + 0.10f, 0.85f, Mountain1Threshold);
-	float SafeM2 = FMath::Lerp(SafeM1 + 0.05f, 0.95f, Mountain2Threshold);
+	// 2. Contrast redistribution: exponent > 1 shifts mid-range values downward,
+	//    producing more water/flat terrain while preserving high peaks at the top.
+	//    1.3f is a subtle curve: noticeable effect without distorting terrain shape.
+	//    (Exponent < 1 would push everything UP, eliminating water — avoid it.)
+	N = FMath::Pow(N, 1.3f);
 
-	// 3. Stepped evaluation
-	if (NormalizedNoise < SafeWater) return 0; // Level 0: Water
-	if (NormalizedNoise < SafeGrass) return 1; // Level 1: Plains
-	if (NormalizedNoise < SafeM1)    return 2; // Level 2: Mountain 1
-	if (NormalizedNoise < SafeM2)    return 3; // Level 3: Mountain 2 
+	// 3. Width-based independent thresholds (no cascading dependency).
+	//    Each slider controls the WIDTH of its terrain band, not its absolute position.
+	//    The minimum widths guarantee all 5 terrain types are always present on the map.
 
-	return 4; // Level 4: Peaks (remainder of the noise spectrum)
-}
+	// Water: bottom band [0, T0]. Default WaterThreshold=0.5 => T0~0.30 => ~30% water
+	float T0 = FMath::Lerp(0.15f, 0.45f, WaterThreshold);
+
+	// Grass: starts at T0, width controlled by slider (min 18%, max 40%)
+	float GrassWidth = FMath::Lerp(0.18f, 0.40f, GrassThreshold);
+	float T1 = FMath::Min(T0 + GrassWidth, 0.72f);
+
+	// Mountain1 (yellow): minimum width 10% guarantees visible yellow tiles
+	float M1Width = FMath::Lerp(0.10f, 0.28f, Mountain1Threshold);
+	float T2 = FMath::Min(T1 + M1Width, 0.84f);
+
+	// Mountain2 (orange): minimum width 8% guarantees visible orange tiles
+	float M2Width = FMath::Lerp(0.08f, 0.16f, Mountain2Threshold);
+	float T3 = FMath::Min(T2 + M2Width, 0.94f);
+
+	// Peak (red): everything above T3 — always present since T3 <= 0.94
+
+	if (N < T0) return 0; // Water    (Blue)
+	if (N < T1) return 1; // Flat     (Green)
+	if (N < T2) return 2; // Mountain (Yellow)
+	if (N < T3) return 3; // Peak     (Orange)
+	return 4;             // Summit   (Red)
+}	
 
 int32 AGameField::GetManhattanDistance(const FVector2D& Start, const FVector2D& End) const
 {

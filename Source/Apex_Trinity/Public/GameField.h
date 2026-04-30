@@ -99,14 +99,14 @@ public:
 	FString GetAlphanumericCoordinate(FVector2D GridPosition) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	float WaterThreshold = 0.30f;
+	float WaterThreshold = 0.50f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	float GrassThreshold = 0.45f;
+	float GrassThreshold = 0.55f;
 
 	// Threshold separating Mountain1 (lvl  2) from Mountain2 (lvl 3)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	float Mountain1Threshold = 0.55f;
+	float Mountain1Threshold = 0.60f;
 
 	// Threshold separating Mountain2 (lvl 3) from Mountain3 (lvl 4)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")

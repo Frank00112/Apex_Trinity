@@ -39,6 +39,12 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Turn")
 	bool bIsPlayer0Turn;
 
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UTMainHUD> MainHUDClass;
+
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	UTMainHUD* MainHUDWidget;
+
 	UFUNCTION(BlueprintCallable, Category = "Action")
 	void PrepareMove();
 
@@ -50,15 +56,9 @@ public:
 	// Resets the selection and state machine (Call this when the turn ends!)
 	void ClearSelectionState();
 
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UTMainHUD> MainHUDClass;
-
-	UPROPERTY(BlueprintReadOnly, Category = "UI")
-	UTMainHUD* MainHUDWidget;
-
-
 protected:
 	virtual void BeginPlay() override;
+
 	virtual void SetupInputComponent() override;
 
 	// Function called on every left mouse click

@@ -10,7 +10,7 @@
 
 AUnit::AUnit()
 {
-	// Ensure Tick is enabled to process the frame-by-frame movement animation
+	// Ensure tick is enabled to process the frame-by-frame movement animation
 	PrimaryActorTick.bCanEverTick = true;
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
@@ -21,7 +21,7 @@ AUnit::AUnit()
 
 	// Generic default values (to be overridden by subclasses)
 	Health = 100;
-	MovementRange = 610; // Note: Ensure this aligns with your grid logic
+	MovementRange = 10; // Ensure this aligns with your grid logic
 	AttackRange = 1;
 	MinAttackDamage = 1;
 	MaxAttackDamage = 10;
@@ -30,7 +30,7 @@ AUnit::AUnit()
 	HealthWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthWidgetComp"));
 	HealthWidgetComp->SetupAttachment(RootComponent);
 
-	// Set space to 'Screen' so the health bar always faces the player's camera (Billboard effect)
+	// Set space to 'Screen' so the health bar always faces the player's camera (billboard effect)
 	HealthWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
 	HealthWidgetComp->SetDrawSize(FVector2D(30.f, 7.f));
 
@@ -88,22 +88,22 @@ void AUnit::MoveToTile(ATile* TargetTile, bool bUseGreedyAlgorithm)
 			// Calculate the center point on the tile surface with an offset for the pawn base
 			FVector TileSurfaceLoc = T->GetActorLocation() + FVector(0.f, 0.f, 50.f);
 
-			// Logic to prevent clipping through terrain during elevation changes [cite: 920]
+			// Logic to prevent clipping through terrain during elevation changes
 			if (TileSurfaceLoc.Z > LastPos.Z + 10.f)
 			{
-				// Step Up: Move vertically first to clear the ledge, then translate forward
+				// Step up: move vertically first to clear the ledge, then translate forward
 				Waypoints.Add(FVector(LastPos.X, LastPos.Y, TileSurfaceLoc.Z));
 				Waypoints.Add(TileSurfaceLoc);
 			}
 			else if (TileSurfaceLoc.Z < LastPos.Z - 10.f)
 			{
-				// Step Down: Move forward to the edge first, then descend vertically
+				// Step down: move forward to the edge first, then descend vertically
 				Waypoints.Add(FVector(TileSurfaceLoc.X, TileSurfaceLoc.Y, LastPos.Z));
 				Waypoints.Add(TileSurfaceLoc);
 			}
 			else
 			{
-				// Flat Terrain: Direct horizontal translation to the next tile center
+				// Flat Terrain: direct horizontal translation to the next tile center
 				Waypoints.Add(TileSurfaceLoc);
 			}
 

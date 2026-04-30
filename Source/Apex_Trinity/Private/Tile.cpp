@@ -6,10 +6,10 @@
 // Sets default values
 ATile::ATile()
 {
-	// Turn off Tick to improve performance (static tiles do not need it) [cite: 483]
+	// Turn off tick to improve performance (static tiles do not need it)
 	PrimaryActorTick.bCanEverTick = false;
 
-	// Create and set root component [cite: 467]
+	// Create and set root component
 	Scene = CreateDefaultSubobject<USceneComponent>(TEXT("Scene"));
 	SetRootComponent(Scene);
 
@@ -26,7 +26,7 @@ ATile::ATile()
 // Called when the game starts or when spawned
 void ATile::BeginPlay()
 {
-	Super::BeginPlay(); // Mandatory call to base class [cite: 463]
+	Super::BeginPlay(); // Mandatory call to base class
 }
 
 void ATile::SetGridPosition(const int32 InX, const int32 InY)

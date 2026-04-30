@@ -100,7 +100,7 @@ void ATGameMode::EndTurn()
 	else Player1TowerTurns = 0;
 
 	// Final Victory Evaluation
-	if (Player0TowerTurns >= 2)
+	if (Player0TowerTurns >= 4)
 	{
 		bIsGameOver = true;
 
@@ -116,7 +116,7 @@ void ATGameMode::EndTurn()
 		BP_OnGameOver(0);
 		return;
 	}
-	else if (Player1TowerTurns >= 2)
+	else if (Player1TowerTurns >= 4)
 	{
 		bIsGameOver = true;
 
@@ -206,8 +206,8 @@ bool ATGameMode::IsAttackValid(AUnit* Attacker, AUnit* Defender) const
 	if (Distance > Attacker->AttackRange) return false;
 
 	// Calculate raycast start and end points with a vertical offset to clear the floor
-	FVector StartLoc = Attacker->GetActorLocation() + FVector(0.f, 0.f, 50.f);
-	FVector EndLoc = Defender->GetActorLocation() + FVector(0.f, 0.f, 50.f);
+	FVector StartLoc = Attacker->GetActorLocation() + FVector(0.f, 0.f, 75.f);
+	FVector EndLoc = Defender->GetActorLocation() + FVector(0.f, 0.f, 75.f);
 
 	FHitResult HitResult;
 	FCollisionQueryParams CollisionParams;
@@ -226,6 +226,28 @@ bool ATGameMode::IsAttackValid(AUnit* Attacker, AUnit* Defender) const
 	return true;
 }
 
+bool ATGameMode::HasAnyValidTarget(AUnit* Attacker) const
+{
+	if (!Attacker) return false;
+
+	TArray<AActor*> AllUnits;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), AllUnits);
+
+	for (AActor* Actor : AllUnits)
+	{
+		AUnit* Enemy = Cast<AUnit>(Actor);
+		// Check all living enemies on the opposing team
+		if (IsValid(Enemy) && Enemy->TeamID != Attacker->TeamID && Enemy->CurrentTile)
+		{
+			if (IsAttackValid(Attacker, Enemy))
+			{
+				return true; // At least one valid target found; no need to continue
+			}
+		}
+	}
+	return false;
+}
+
 void ATGameMode::CheckWinCondition(AUnit* UnitToIgnore)
 {
 	// Victory is solely handled by Tower Domination in EndTurn().
@@ -241,25 +263,36 @@ void ATGameMode::CheckAutoEndTurn()
 	bool bCanStillAct = false;
 	int32 ActiveTeam = (CurrentTurn == ETurnState::Player0Turn) ? 0 : 1;
 
-	// Check if any unit belonging to the active team still has available actions
 	for (AActor* Actor : AllUnits)
 	{
 		AUnit* Unit = Cast<AUnit>(Actor);
-		if (IsValid(Unit) && Unit->TeamID == ActiveTeam)
+		if (!IsValid(Unit) || Unit->TeamID != ActiveTeam) continue;
+
+		// Movement is always a valid action if the unit hasn't moved yet
+		if (!Unit->bHasMoved)
 		{
-			// A unit can act if it hasn't moved or hasn't attacked yet
-			if (!Unit->bHasMoved || !Unit->bHasAttacked)
-			{
-				bCanStillAct = true;
-				break;
-			}
+			bCanStillAct = true;
+			break;
+		}
+
+		// Attack is only meaningful if the unit hasn't acted AND
+		// at least one enemy is within valid attack range
+		if (!Unit->bHasAttacked && HasAnyValidTarget(Unit))
+		{
+			bCanStillAct = true;
+			break;
 		}
 	}
 
-	// Automatically transition the turn if no more actions are possible
 	if (!bCanStillAct)
 	{
-		//if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan, TEXT("All actions exhausted. Automatic turn end."));
+		if (ATPlayerController* PC = Cast<ATPlayerController>(GetWorld()->GetFirstPlayerController()))
+		{
+			if (PC->MainHUDWidget)
+			{
+				PC->MainHUDWidget->BP_ShowSystemMessage(TEXT("No valid actions remaining. Turn ended automatically."));
+			}
+		}
 		EndTurn();
 	}
 }
