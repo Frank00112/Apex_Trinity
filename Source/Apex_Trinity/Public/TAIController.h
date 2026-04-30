@@ -22,6 +22,12 @@ public:
 
 	void ExecuteAIDeployment();
 
+	// Array to store the units that still need to take action this turn
+	TArray<class AUnit*> UnitsToProcess;
+
+	// Tracks which unit in the array is currently acting
+	int32 CurrentUnitIndex;
+
 private:
 	// Pointer to the referee to access grid and rules
 	ATGameMode* GameMode;
@@ -34,12 +40,6 @@ private:
 
 	// Timer manager for pacing AI actions
 	FTimerHandle AITimerHandle;
-
-	// Array to store the units that still need to take action this turn
-	TArray<class AUnit*> UnitsToProcess;
-
-	// Tracks which unit in the array is currently acting
-	int32 CurrentUnitIndex;
 
 	// Function triggered by the timer to process the next unit in the array
 	void ProcessNextUnit();

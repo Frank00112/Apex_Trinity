@@ -64,6 +64,14 @@ void ATGameMode::EndTurn()
 {
 	// Guard against re-entrant calls: AI timers and UI buttons can fire simultaneously
 	if (bIsGameOver || bEndTurnInProgress) return;
+
+	// Logical block of human input during active AI processing.
+	if (CurrentTurn == ETurnState::Player1Turn && !bAITurnFinishRequested)
+	{
+		return; 
+	}
+
+	bAITurnFinishRequested = false;
 	bEndTurnInProgress = true;
 
 	// 1. Force a complete visual clear every time the turn changes

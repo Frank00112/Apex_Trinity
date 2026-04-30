@@ -94,7 +94,7 @@ void ATPlayerController::OnLeftMouseClick()
 		return;
 	}
 
-	// PHASE 1: Deployment
+	// PHASE 1: deployment
 	if (GameMode->MatchPhase == EMatchPhase::Setup)
 	{
 		// Only process clicks when it is the human player's deployment turn
@@ -113,7 +113,7 @@ void ATPlayerController::OnLeftMouseClick()
 		return;
 	}
 
-	// PHASE 2: Battle
+	// PHASE 2: battle
 	FHitResult HitResult;
 	bool bHit = GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 
@@ -121,14 +121,14 @@ void ATPlayerController::OnLeftMouseClick()
 	{
 		AActor* ClickedActor = HitResult.GetActor();
 
-		// CHECK A: Did the player click on a Unit?
+		// CHECK A: did the player click on a Unit?
 		AUnit* ClickedUnit = Cast<AUnit>(ClickedActor);
 		if (ClickedUnit)
 		{
 			bIsPlayer0Turn = (GameMode->CurrentTurn == ETurnState::Player0Turn);
 			bool bIsPlayer0Unit = (ClickedUnit->TeamID == 0);
 
-			// CASE A1: Select a friendly unit
+			// CASE A1: select a friendly unit
 			if ((bIsPlayer0Turn && bIsPlayer0Unit) || (!bIsPlayer0Turn && !bIsPlayer0Unit))
 			{
 				if (ClickedUnit->bHasMoved && ClickedUnit->bHasAttacked)
@@ -164,7 +164,7 @@ void ATPlayerController::OnLeftMouseClick()
 				}
 			}
 
-			// CASE A2: Attack execution — clicked an enemy while a friendly is selected
+			// CASE A2: attack execution — clicked an enemy while a friendly is selected
 			else if (SelectedUnit)
 			{
 				// Guard: unit already spent its attack this turn
@@ -271,7 +271,7 @@ void ATPlayerController::OnLeftMouseClick()
 			return;
 		}
 
-		// CHECK B: Did the player click on a Tile to move?
+		// CHECK B: did the player click on a Tile to move?
 		ATile* ClickedTile = Cast<ATile>(ClickedActor);
 		if (ClickedTile)
 		{
@@ -367,7 +367,7 @@ void ATPlayerController::OnLeftMouseClick()
 		GameMode->CheckAutoEndTurn();
 	}
 
-	// CHECK C: Player clicked empty space — deselect the current unit
+	// CHECK C: player clicked empty space — deselect the current unit
 	if (SelectedUnit)
 	{
 		GameMode->GameField->ClearHighlights();

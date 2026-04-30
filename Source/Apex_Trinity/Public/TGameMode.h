@@ -120,6 +120,8 @@ public:
 	UPROPERTY()
 	bool bEndTurnInProgress = false;
 
+	bool bAITurnFinishRequested = false;
+
 protected:
 	virtual void BeginPlay() override;
 

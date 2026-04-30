@@ -59,6 +59,7 @@ void ATAIController::ProcessNextUnit()
 			GameMode->GameField->ClearHighlights();
 		}
 		GetWorld()->GetTimerManager().ClearTimer(AITimerHandle);
+		GameMode->bAITurnFinishRequested = true;
 		GameMode->EndTurn();
 	}
 }
