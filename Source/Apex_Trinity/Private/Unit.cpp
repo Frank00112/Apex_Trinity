@@ -20,8 +20,8 @@ AUnit::AUnit()
 	MeshComponent->SetupAttachment(RootComponent);
 
 	// Generic default values (to be overridden by subclasses)
-	Health = 100;
-	MovementRange = 10; // Ensure this aligns with your grid logic
+	Health = 10;
+	MovementRange = 3; // Ensure this aligns with your grid logic
 	AttackRange = 1;
 	MinAttackDamage = 1;
 	MaxAttackDamage = 10;

@@ -62,6 +62,10 @@ void ATGameMode::StartMatch()
 
 void ATGameMode::EndTurn()
 {
+	// Guard against re-entrant calls: AI timers and UI buttons can fire simultaneously
+	if (bIsGameOver || bEndTurnInProgress) return;
+	bEndTurnInProgress = true;
+
 	// 1. Force a complete visual clear every time the turn changes
 	if (GameField)
 	{
@@ -174,6 +178,9 @@ void ATGameMode::EndTurn()
 			Unit->ResetActions();
 		}
 	}
+
+	// Release the lock — must be last
+	bEndTurnInProgress = false;
 }
 
 bool ATGameMode::IsMoveValid(AUnit* Unit, ATile* DestinationTile) const
@@ -206,23 +213,30 @@ bool ATGameMode::IsAttackValid(AUnit* Attacker, AUnit* Defender) const
 	if (Distance > Attacker->AttackRange) return false;
 
 	// Calculate raycast start and end points with a vertical offset to clear the floor
-	FVector StartLoc = Attacker->GetActorLocation() + FVector(0.f, 0.f, 75.f);
-	FVector EndLoc = Defender->GetActorLocation() + FVector(0.f, 0.f, 75.f);
-
-	FHitResult HitResult;
-	FCollisionQueryParams CollisionParams;
-	CollisionParams.AddIgnoredActor(Attacker);
-	CollisionParams.AddIgnoredActor(Defender);
-	if (Attacker->CurrentTile) CollisionParams.AddIgnoredActor(Attacker->CurrentTile);
-	if (Defender->CurrentTile) CollisionParams.AddIgnoredActor(Defender->CurrentTile);
-
-	// Perform visibility trace; if an obstacle is intercepted, the melee attack is blocked
-	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLoc, EndLoc, ECC_Visibility, CollisionParams);
-	if (bHit)
+	// Ranged attackers (Sniper) ignore all obstacles per GDD spec —
+    // only distance and elevation matter, no line-of-sight check needed.
+    // Melee attackers (Brawler) use a raycast to prevent attacks through walls.
+	if (Attacker->AttackRange == 1)
 	{
-		return false;
-	}
+		// Melee: verify physical line of sight to prevent clipping through geometry
+		FVector StartLoc = Attacker->GetActorLocation() + FVector(0.f, 0.f, 75.f);
+		FVector EndLoc = Defender->GetActorLocation() + FVector(0.f, 0.f, 75.f);
 
+		FHitResult HitResult;
+		FCollisionQueryParams CollisionParams;
+		CollisionParams.AddIgnoredActor(Attacker);
+		CollisionParams.AddIgnoredActor(Defender);
+		if (Attacker->CurrentTile) CollisionParams.AddIgnoredActor(Attacker->CurrentTile);
+		if (Defender->CurrentTile) CollisionParams.AddIgnoredActor(Defender->CurrentTile);
+
+		bool bHit = GetWorld()->LineTraceSingleByChannel(
+			HitResult, StartLoc, EndLoc, ECC_Visibility, CollisionParams);
+		if (bHit)
+		{
+			return false;
+		}
+	}
+	// Ranged attack: no obstacle check, fall through to return true
 	return true;
 }
 

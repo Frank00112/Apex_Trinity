@@ -116,6 +116,10 @@ public:
 	// Returns true if the given unit has at least one attackable enemy within range
 	bool HasAnyValidTarget(class AUnit* Attacker) const;
 
+	// Prevents duplicate EndTurn calls from racing timers or UI buttons
+	UPROPERTY()
+	bool bEndTurnInProgress = false;
+
 protected:
 	virtual void BeginPlay() override;
 

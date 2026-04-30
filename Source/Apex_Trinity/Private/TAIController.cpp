@@ -3,6 +3,7 @@
 
 #include "TAIController.h"
 #include "TGameMode.h"
+#include "TPlayerController.h" 
 #include "Unit.h"
 #include "GameField.h"
 #include "Tower.h"
@@ -37,7 +38,8 @@ void ATAIController::ExecuteAITurn()
 	}
 
 	CurrentUnitIndex = 0;
-	ProcessNextUnit();
+
+	GetWorld()->GetTimerManager().SetTimer(AITimerHandle, this, &ATAIController::ProcessNextUnit, 2.0f, false);
 }
 
 void ATAIController::ProcessNextUnit()
@@ -47,7 +49,8 @@ void ATAIController::ProcessNextUnit()
 		AUnit* UnitToCommand = UnitsToProcess[CurrentUnitIndex];
 		ProcessUnitTurn(UnitToCommand);
 		CurrentUnitIndex++;
-		GetWorld()->GetTimerManager().SetTimer(AITimerHandle, this, &ATAIController::ProcessNextUnit, 1.5f, false);
+
+		GetWorld()->GetTimerManager().SetTimer(AITimerHandle, this, &ATAIController::ProcessNextUnit, 2.5f, false);
 	}
 	else
 	{
@@ -87,7 +90,7 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 		int32 Damage = AIUnit->GetRandomAttackDamage();
 		TargetEnemy->ReceiveDamage(Damage);
 
-		// GDD logging: Attack
+		// GDD logging: attack
 		FString PlayerTag = (AIUnit->TeamID == 0) ? TEXT("HP") : TEXT("AI");
 		FString UnitTag = AIUnit->IsA(ASniper::StaticClass()) ? TEXT("S") : TEXT("B");
 		FString TargetCoord = GameMode->GameField->GetAlphanumericCoordinate(TargetEnemy->CurrentTile->GetGridPosition());
@@ -109,12 +112,23 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 				AIUnit->ReceiveDamage(CounterDamage);
 
 				// GDD logging: counterattack
+				// The defender (TargetEnemy) becomes the executor of the counterattack
 				FString CounterPlayerTag = (TargetEnemy->TeamID == 0) ? TEXT("HP") : TEXT("AI");
 				FString CounterUnitTag = TargetEnemy->IsA(ASniper::StaticClass()) ? TEXT("S") : TEXT("B");
 				FString AICoord = GameMode->GameField->GetAlphanumericCoordinate(AIUnit->CurrentTile->GetGridPosition());
 
-				FString CounterLogStr = FString::Printf(TEXT("%s: %s %s %d"), *CounterPlayerTag, *CounterUnitTag, *AICoord, CounterDamage);
+				// Standardized the counterattack string format to match the human player
+				FString CounterLogStr = FString::Printf(TEXT("%s: %s %s Counterattack %d"), *CounterPlayerTag, *CounterUnitTag, *AICoord, CounterDamage);
 				GameMode->LogAction(CounterLogStr);
+
+				// UI Notification for the Human Player observing the AI turn
+				if (ATPlayerController* PC = Cast<ATPlayerController>(GetWorld()->GetFirstPlayerController()))
+				{
+					if (PC->MainHUDWidget)
+					{
+						PC->MainHUDWidget->BP_ShowSystemMessage(TEXT("COUNTERATTACK!"));
+					}
+				}
 			}
 		}
 
@@ -173,7 +187,6 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 			if (PreviousUnitTiles.Contains(AIUnit) && PreviousUnitTiles[AIUnit] == Tile)
 			{
 				TacticalScore -= 100000.f; // Large penalty applied to the previous tile's cost to prevent immediate backtracking
-                                           // and mitigate oscillation loops in the Greedy pathfinding logic.
 			}
 
 			// If this tactical score is the highest found so far, cache this tile as the best option
@@ -260,12 +273,23 @@ void ATAIController::ProcessUnitTurn(AUnit* AIUnit)
 					AIUnit->ReceiveDamage(CounterDamage);
 
 					// GDD logging: counterattack
+					// The defender (TargetEnemy) becomes the executor of the counterattack
 					FString CounterPlayerTag = (TargetEnemy->TeamID == 0) ? TEXT("HP") : TEXT("AI");
 					FString CounterUnitTag = TargetEnemy->IsA(ASniper::StaticClass()) ? TEXT("S") : TEXT("B");
 					FString AICoord = GameMode->GameField->GetAlphanumericCoordinate(AIUnit->CurrentTile->GetGridPosition());
 
-					FString CounterLogStr = FString::Printf(TEXT("%s: %s %s %d"), *CounterPlayerTag, *CounterUnitTag, *AICoord, CounterDamage);
+					// Standardized the counterattack string format to match the human player
+					FString CounterLogStr = FString::Printf(TEXT("%s: %s %s Counterattack %d"), *CounterPlayerTag, *CounterUnitTag, *AICoord, CounterDamage);
 					GameMode->LogAction(CounterLogStr);
+
+					// UI Notification for the Human Player observing the AI turn
+					if (ATPlayerController* PC = Cast<ATPlayerController>(GetWorld()->GetFirstPlayerController()))
+					{
+						if (PC->MainHUDWidget)
+						{
+							PC->MainHUDWidget->BP_ShowSystemMessage(TEXT("COUNTERATTACK!"));
+						}
+					}
 				}
 			}
 

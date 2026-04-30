@@ -6,6 +6,7 @@
 #include "Tile.h"
 #include "TGameMode.h"
 #include "TGameMode3D.h"
+#include "TPlayerController.h"
 #include "Math/UnrealMathUtility.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -231,10 +232,18 @@ void AGameField::HighlightAttackableTiles(AUnit* SelectedUnit)
 
 	FVector2D UnitPos = SelectedUnit->CurrentTile->GetGridPosition();
 	int32 Range = SelectedUnit->AttackRange;
+	ETileElevation AttackerElev = SelectedUnit->CurrentTile->GetElevation();
 
 	for (ATile* Tile : TileArray)
 	{
 		if (Tile == SelectedUnit->CurrentTile) continue;
+		if (!Tile->OccupyingUnit) continue; // Only highlight tiles with an enemy on them
+
+		// Enemy check
+		if(Tile->OccupyingUnit->TeamID == SelectedUnit->TeamID) continue;
+
+		// Elevation constraint: cannot highlight tiles on higher ground
+		if (Tile->GetElevation() > AttackerElev) continue;
 
 		int32 Distance = FMath::Abs(UnitPos.X - Tile->GetGridPosition().X) + FMath::Abs(UnitPos.Y - Tile->GetGridPosition().Y);
 
@@ -294,45 +303,6 @@ FVector AGameField::GetRelativeLocationByXYPosition(const int32 InX, const int32
 	return GetActorLocation() + FVector(PosX, PosY, PosZ);
 }
 
-int32 AGameField::QuantizePerlinNoise(float NoiseValue) const
-{
-	// 1. Normalize Perlin output from [-1, 1] to [0, 1]
-	float N = FMath::Clamp((NoiseValue + 1.0f) * 0.5f, 0.0f, 1.0f);
-
-	// 2. Contrast redistribution: exponent > 1 shifts mid-range values downward,
-	//    producing more water/flat terrain while preserving high peaks at the top.
-	//    1.3f is a subtle curve: noticeable effect without distorting terrain shape.
-	//    (Exponent < 1 would push everything UP, eliminating water — avoid it.)
-	N = FMath::Pow(N, 1.3f);
-
-	// 3. Width-based independent thresholds (no cascading dependency).
-	//    Each slider controls the WIDTH of its terrain band, not its absolute position.
-	//    The minimum widths guarantee all 5 terrain types are always present on the map.
-
-	// Water: bottom band [0, T0]. Default WaterThreshold=0.5 => T0~0.30 => ~30% water
-	float T0 = FMath::Lerp(0.15f, 0.45f, WaterThreshold);
-
-	// Grass: starts at T0, width controlled by slider (min 18%, max 40%)
-	float GrassWidth = FMath::Lerp(0.18f, 0.40f, GrassThreshold);
-	float T1 = FMath::Min(T0 + GrassWidth, 0.72f);
-
-	// Mountain1 (yellow): minimum width 10% guarantees visible yellow tiles
-	float M1Width = FMath::Lerp(0.10f, 0.28f, Mountain1Threshold);
-	float T2 = FMath::Min(T1 + M1Width, 0.84f);
-
-	// Mountain2 (orange): minimum width 8% guarantees visible orange tiles
-	float M2Width = FMath::Lerp(0.08f, 0.16f, Mountain2Threshold);
-	float T3 = FMath::Min(T2 + M2Width, 0.94f);
-
-	// Peak (red): everything above T3 — always present since T3 <= 0.94
-
-	if (N < T0) return 0; // Water    (Blue)
-	if (N < T1) return 1; // Flat     (Green)
-	if (N < T2) return 2; // Mountain (Yellow)
-	if (N < T3) return 3; // Peak     (Orange)
-	return 4;             // Summit   (Red)
-}	
-
 int32 AGameField::GetManhattanDistance(const FVector2D& Start, const FVector2D& End) const
 {
 	int32 DiffX = FMath::Abs(FMath::RoundToInt(End.X - Start.X));
@@ -390,7 +360,7 @@ TArray<ATile*> AGameField::GetReachableTiles(AUnit* Unit) const
 			// Cannot walk through occupied tiles
 			if (Neighbor->OccupyingUnit && Neighbor->OccupyingUnit != Unit) continue;
 
-			int32 StepCost = (Neighbor->GetActorLocation().Z > Current->GetActorLocation().Z + 10.f) ? 2 : 1;
+			int32 StepCost = (Neighbor->GetElevation() > Current->GetElevation()) ? 2 : 1;
 			int32 TotalCost = CostMap[Current] + StepCost;
 
 			if (TotalCost <= MaxCost)
@@ -485,8 +455,8 @@ TArray<ATile*> AGameField::FindPath(ATile* StartNode, ATile* EndNode)
 			// Occupancy rule: units act as dynamic obstacles (unless it's the target tile)
 			if (Neighbor->OccupyingUnit && Neighbor != EndNode) continue;
 
-			// Weighted Movement: Uphill traversal incurs a higher cost (2) compared to level or downhill (1)
-			int32 StepCost = (Neighbor->GetActorLocation().Z > Current->GetActorLocation().Z + 10.f) ? 2 : 1;
+			// Weighted Movement: uphill traversal incurs a higher cost (2) compared to level or downhill (1)
+			int32 StepCost = (Neighbor->GetElevation() > Current->GetElevation()) ? 2 : 1;
 			int32 TentativeGCost = GCost[Current] + StepCost;
 
 			// Path optimization: update neighbor if a cheaper path is discovered
@@ -580,4 +550,33 @@ TArray<ATile*> AGameField::FindPathGreedy(ATile* StartNode, ATile* EndNode)
 		}
 	}
 	return Path; // Return an empty array if no valid path exists
+}
+
+int32 AGameField::QuantizePerlinNoise(float NoiseValue) const
+{
+	// 1. Normalize Perlin output from [-1, 1] to [0, 1]
+	float N = FMath::Clamp((NoiseValue + 1.0f) * 0.5f, 0.0f, 1.0f);
+
+	N = FMath::Pow(N, 1.05f);
+
+	// Water: bottom band [0, T0]. 
+	float T0 = FMath::Lerp(0.15f, 0.45f, WaterThreshold);
+
+	// Grass: starts at T0
+	float GrassWidth = FMath::Lerp(0.18f, 0.40f, GrassThreshold);
+	float T1 = FMath::Min(T0 + GrassWidth, 0.72f);
+
+	// Mountain1 (yellow)
+	float M1Width = FMath::Lerp(0.10f, 0.28f, Mountain1Threshold);
+	float T2 = FMath::Min(T1 + M1Width, 0.84f);
+
+	// Mountain2 (orange)
+	float M2Width = FMath::Lerp(0.08f, 0.16f, Mountain2Threshold);
+	float T3 = FMath::Min(T2 + M2Width, 0.94f);
+
+	if (N < T0) return 0; // Water     (Blue)
+	if (N < T1) return 1; // Flat      (Green)
+	if (N < T2) return 2; // Mountain  (Yellow)
+	if (N < T3) return 3; // Peak      (Orange)
+	return 4;             // Summit    (Red)
 }

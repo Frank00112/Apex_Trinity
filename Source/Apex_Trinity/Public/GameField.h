@@ -99,21 +99,21 @@ public:
 	FString GetAlphanumericCoordinate(FVector2D GridPosition) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	float WaterThreshold = 0.50f;
+	float WaterThreshold = 0.25f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	float GrassThreshold = 0.55f;
+	float GrassThreshold = 0.30f;
 
 	// Threshold separating Mountain1 (lvl  2) from Mountain2 (lvl 3)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	float Mountain1Threshold = 0.60f;
+	float Mountain1Threshold = 0.40f;
 
 	// Threshold separating Mountain2 (lvl 3) from Mountain3 (lvl 4)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
 	float Mountain2Threshold = 0.65f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	float NoiseScale = 0.15f;
+	float NoiseScale = 0.12f;
 
 	// Main function generating the procedural game field
 	UFUNCTION(BlueprintCallable, Category = "Map Generation")
